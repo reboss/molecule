@@ -41,6 +41,12 @@ if TYPE_CHECKING:
     from molecule.reporting.definitions import ScenarioResults, ScenariosResults
 
 
+# Pattern for matching valid Rich markup tag names
+# Matches alphanumeric chars, hyphens, underscores, and dots
+# Examples: [bold], [scenario], [logging.level.info]
+RICH_MARKUP_TAG_PATTERN = r"[a-zA-Z0-9_.\-]+"
+
+
 def should_do_markup() -> bool:
     """Decide about use of ANSI colors.
 
@@ -156,7 +162,9 @@ class AnsiOutput:
         Returns:
             Text with all markup tags removed.
         """
-        return re.sub(r"\[/?[^\]]*\]", "", str(text))
+        # Only strip valid Rich markup tags and bare closing tags [/]
+        # This avoids stripping literal brackets like ["..."] in error messages
+        return re.sub(rf"\[(?:/|{RICH_MARKUP_TAG_PATTERN})\]", "", str(text))
 
     def process_markup(self, text: str) -> str:
         """Convert Rich-style markup tags to ANSI escape codes.
@@ -182,7 +190,8 @@ class AnsiOutput:
                     return ""
 
         # Match tags that don't start with /
-        processed = re.sub(r"\[([^/\]]+)\]", replace_tag, text)
+        # Use a more restrictive pattern to avoid matching literal brackets in error messages
+        processed = re.sub(rf"\[({RICH_MARKUP_TAG_PATTERN})\]", replace_tag, text)
 
         # Process closing tags last (convert [/] to reset)
         return processed.replace("[/]", A.RESET)

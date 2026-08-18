@@ -302,3 +302,29 @@ def test_process_markup_complex() -> None:
     assert "test" in result
     assert "action" in result
     assert "bold" in result
+
+
+def test_strip_markup_preserves_literal_brackets() -> None:
+    """Test that literal brackets in error messages are not stripped.
+
+    This is critical for validation errors that contain Python list/dict
+    representations like ["Additional properties are not allowed"].
+    """
+    ansi_output = AnsiOutput()
+
+    # Test Python list representation (common in validation errors)
+    text = 'Failed to validate\n\n["Additional properties are not allowed"]'
+    assert ansi_output.strip_markup(text) == text
+
+    # Test dict-like syntax
+    text_dict = 'Error: {"key": "value"} was unexpected'
+    assert ansi_output.strip_markup(text_dict) == text_dict
+
+    # Test mixed: markup tags + literal brackets
+    text_mixed = '[bold]Error[/]: ["value" was unexpected]'
+    expected = 'Error: ["value" was unexpected]'
+    assert ansi_output.strip_markup(text_mixed) == expected
+
+    # Test process_markup also preserves literal brackets
+    result = ansi_output.process_markup('["test"]')
+    assert result == '["test"]'
