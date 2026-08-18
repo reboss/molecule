@@ -156,7 +156,10 @@ class AnsiOutput:
         Returns:
             Text with all markup tags removed.
         """
-        return re.sub(r"\[/?[^\]]*\]", "", str(text))
+        # Only strip valid Rich markup tags (word chars, hyphens, underscores)
+        # Also handle bare closing tags [/]
+        # This avoids stripping literal brackets like ["..."] in error messages
+        return re.sub(r"\[(?:/|[a-zA-Z0-9_-]+)\]", "", str(text))
 
     def process_markup(self, text: str) -> str:
         """Convert Rich-style markup tags to ANSI escape codes.
@@ -182,7 +185,9 @@ class AnsiOutput:
                     return ""
 
         # Match tags that don't start with /
-        processed = re.sub(r"\[([^/\]]+)\]", replace_tag, text)
+        # Use a more restrictive pattern to avoid matching literal brackets in error messages
+        # Only match word characters, hyphens, and underscores (valid Rich markup tag names)
+        processed = re.sub(r"\[([a-zA-Z0-9_-]+)\]", replace_tag, text)
 
         # Process closing tags last (convert [/] to reset)
         return processed.replace("[/]", A.RESET)
